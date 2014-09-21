@@ -1,0 +1,124 @@
+---
+title: "week_4_assignment"
+author: "Adejare Windokun"
+date: "Friday, September 19, 2014"
+output:
+  html_document:
+    fig_caption: yes
+    keep_md: yes
+  pdf_document: default
+---
+
+1. Describe your algorithm for deciding how to compare "best popular" movies between years. 
+
+Deciding which movie is best popular is difficult as there are various different attributes to use. In addition there are over 50,000 movies in the database. In order to make the number more manageable, I am going to compare these movies in a time series across decades instead. 
+
+The best movies are going to be a combination of movies that had very high ratings by the viewers, and also had the top votes. If not, it is quite possible for a dedicated group of people to vote very highly for a movie, and therefore it would rank very high despite the fact that it was not popular.
+
+Pseudocode
+1   Divided up all the movies by decade, those before 1960, will be put in a Pre 1960 bin.
+2   Extract all movies that had a rating equal to or higher than 95 percentile in their corresponding decade bin
+3   Extract all movies that in addition to ranking at the top 5% also ranked at the top 5% for votes
+4   Show a plot of the votes, and ratings versus decades
+5   Print out a list of those movies
+
+
+
+2. Provide R code that supports your conclusions. - see below
+3. Use at least one visualization in support of your conclusion from the ggplot2 package.
+4  Use at least one function in support of your conclusion from the plyr package - used the dplyr package instead
+
+Deliver your code, document, and results in R Markdown.
+MSDA
+
+```{r}
+movies <- read.delim("C:/Users/jare/SkyDrive/WorkDocs/CUNY/607/Week 4/movies.tab", header=TRUE, stringsAsFactors = FALSE)
+# will take out columns that are not needed
+movies = subset(movies, select = -(7:24))
+#install.packages("ggplot2") graphic package, already installed
+#install.packages("dplyr")
+require (dplyr)
+require(ggplot2)
+
+# function to convert year to corresponding decade
+
+CreateDecades = function(d){
+
+    if (d >= 2010){
+
+        return("2010s")
+
+    }else if (d >=2000 ) {
+
+        return ("2000s")
+    } else if (d >= 1990){
+
+        return ("1990s")
+
+    } else if (d >= 1980){
+
+        return ("1980s")
+
+    }else if (d >=1970 ) {
+
+        return ("1970s")
+
+    } else if (d >= 1960){
+
+        return ("1960s")
+    } else {
+
+        return ("Pre 1960")
+    }
+}
+
+movies = tbl_df(movies)
+# will create a column to store the decades
+movies$decades = sapply(movies$year, CreateDecades) 
+
+#convert the newly created column to a factor for use by the aggregation function
+movies$decades = as.factor(movies$decades)
+
+# create a subset of the movies to use with the aggregate function, we are going to aggregate on rating and votes
+submovies = select(movies, decades, rating, votes)
+
+aggsubmovies = aggregate(. ~ decades, data = submovies, FUN = function (x) c(q = quantile(x, probs = 0.95)))
+
+
+# will now merge our newly created dataframe with the movie dataframe so that we can exculde rows we do not want. We will merge on decades which is contained in both dataframes
+
+newmovies = merge(movies, aggsubmovies, by.x = "decades",by.y =  "decades")
+
+
+df = filter(newmovies, (votes.x >=  votes.y) & (rating.x >= rating.y))
+
+g = select(df, title, year, decades,rating.x, rating.y, votes.x, votes.y)
+
+#g
+
+summaryg =  g %.%
+group_by(decades) %.%
+summarize(count = n())
+
+
+```
+
+Visualization in support of conclusions:
+1. 
+```{r, echo=FALSE}
+ggplot(aggsubmovies, aes(x = reorder(decades, rating), y = rating, fill = votes)) + geom_bar(stat = "identity", color = "black", position = "dodge") + labs(title = "Votes, ratings of top movies by decade", x = "Decades", y = "95% of ratings")
+```
+
+
+Visualization in support of conclusions:
+2. 
+```{r, echo=FALSE}
+ggplot(summaryg, aes(x = reorder(decades, count), y = count)) + geom_bar(stat = "identity", color = "black", fill = "lightgreen") + labs(title = "Count of top movies by decade", x = "Decades", y = "Number of movies")
+```
+
+
+
+List of movies per decade that were in the top 5% of both rating and votes:
+```{r}
+select(g, title, year, decades, rating = rating.x, votes = votes.x)
+```
