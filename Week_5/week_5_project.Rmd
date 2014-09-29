@@ -1,0 +1,232 @@
+---
+title: "week_5_project"
+author: "Adejare Windokun"
+date: "Monday, September 29, 2014"
+output: pdf_document
+---
+
+roject 2: Profiling a Data Set
+
+Data obtained from:
+http://www.cms.gov/apps/ama/license-2011.asp?file=http://download.cms.gov/Research-Statistics-Data-and-Systems
+/Statistics-Trends-and-Reports/Medicare-Provider-Charge-Data/Downloads/Medicare-Physician-and-Other-Supplier-PUF-a-CY2012.zip
+This data set contains all CMS payments to healthcare professionals for the year 2012, and includes such data as
+provider id, first name, last name, initials, speciality, amount billed,procedure code, amount paid, mean for amount paid etc
+The actual dataset consisits of 9 million records and is 1.7 GB in size so I am going to use a subset which consists of
+providers last whose names start with 'A'
+
+This dataset is provider as an Excel file and I therefore opened and and saved it as a txt file. Direct import into R
+leads to data corruption
+I will be using the dplyr package in addtion to base R functions for the data profiling
+
+```{r}
+require(ggplot2)
+require(plyr)
+require(dplyr)
+f= "C:/Users/jare/SkyDrive/WorkDocs/CUNY/607/Week 5/PUPD PUF A.txt"
+data = read.table (f, header = TRUE,  sep = ",")
+head(data)
+names(data)
+data = tbl_df(data)
+```
+create easier names for the columns, and select which of the colums we are going to use
+```{r}
+subdata = select(data, npi, nppes_provider_gender, nppes_entity_code, nppes_provider_state, provider_type, place_of_service, average_Medicare_payment_amt)
+
+n = c("provider_ID", "gender", "entity_code", "state", "provider_type", "place_of_service", "amount_paid")
+names(subdata) = n
+subdata = tbl_df(subdata)
+```
+
+We have a total of 397,221 records with 7 columns
+
+```{r}
+dim(subdata)
+```
+
+will remove the rows where the entity is not an individual ie I, this is because the dataset also contains payments to organisations
+```{r}
+idata = filter(subdata, entity_code == 'I')
+```
+we are now left with 375,583 individual payments to providers
+```{r}
+dim(idata)
+```
+
+The amount_paid which is the numeric amount that CMS paid for the serive got imported as a character, will convert it back to numerical
+```{r}
+idata$amount_paid = as.numeric(idata$amount_paid)
+str(idata)
+```
+
+Analysis Requirements
+You should include analysis of each variable. Summarize the values, identify any questionable values or outliers,
+and explain the (possible) significance of any missing values in the column.
+In addition, consider the possibilities of correlations among the variables. Look for any interesting patterns.
+(Do two columns correlate perfectly? Do missing values appear consistent across observations?
+These are just two such interesting possibilities.)
+Consider whether there are any variables that should be recoded or binned. Do such transformations lead to further insights into the data set?
+Remember that your ultimate goal is to tell a story from the data. Include basic visualizations where appropriate.
+
+provider_ID
+
+***************Analysis
+The provider_ID field consists of a numeric code that CMS assigns to each provider and organization and it is a unique identifier
+it therefore allows the tracking of payments made to a single entity. By definition, this field cannot have a null or NA value
+The data below shows the total amount paid to each provider, the mean and standard deviation
+```{r}
+summary.provider_ID = aggregate(amount_paid ~ provider_ID, data = idata, FUN = function(x) c(sum = sum(x), mean = mean(x), sd = sd(x)))
+head(summary.provider_ID)
+```
+
+The function the creates the sum, mean and sd returns a list in a column, so we need to separtate the list before using it
+Ideally should create a funtion that does this automatically
+```{r}
+
+summary.provider_ID = cbind(summary.provider_ID[1], (unlist(summary.provider_ID[,2])))
+```
+The top paid providers
+
+```{r}
+head(arrange(summary.provider_ID, desc(sum)))
+```
+The bottom paid providers
+The absent sd simply indicates that these providers where only paid for a single service and therefore only received a single payment
+
+```{r}
+tail(arrange(summary.provider_ID, desc(sum)))
+```
+
+Ggender
+***************Analysis
+This is a character field that stores the entities gender, M = Male, F = Female, and null where the entity is an organization
+we have removed organizational entites therefore we only have M and F.
+The results of this are interesting. While Males where paid almost 4 times the total amount in aggregate than females
+the mean and sd payments are very similar, inidcating that this is more a function of the amount of males present in the
+dataset
+
+```{r}
+summary1 = aggregate(amount_paid ~ gender, data = idata, FUN = function(x) c(sum = sum(x), mean = mean(x), sd = sd(x)))
+summary1
+```
+
+This shows that we have twice as many Male providers as Female providers
+
+```{r}
+ddply(idata,~gender,summarise,number_of_providers = length(unique(provider_ID)))
+```
+
+Entity_code
+***************Analysis
+not required - we are only looking at individual providers
+This is a character column that stores the values I for individual providers and O for organizations
+We have already filetered out and left only the individual proviers
+
+
+State
+***************Analysis
+This is a character code that stores the state abbrevation of where the provider practices. A code of ZZ means the provider is not in the US. The other codes include the following:
+
+'XX' = 'Unknown'
+'AA' = 'Armed Forces Central/South America'
+'AE' = 'Armed Forces Europe'
+'AP' = 'Armed Forces Pacific'
+'AS' = 'American Samoa'
+'GU' = 'Guam'
+'MP' = 'North Mariana Islands'
+'PR' = 'Puerto Rico'
+'VI' = 'Virgin Islands'
+'ZZ' = 'Foreign Country'
+
+The results are as expected. The highest paid states from CMS are Florida, Texas, California and New York, which incidentally tend to have larger populations and therefore larger elderly people whose insurance is therefore covered by Medicare
+```{r}
+summary2 = aggregate(amount_paid ~ state, data = idata, FUN = function(x) c(sum = sum(x), mean = mean(x), sd = sd(x)))
+summary = cbind(summary2[1], (unlist(summary2[,2])))
+summary
+arrange(summary, desc(sum))
+```
+Provider_type
+***************Analysis
+This is a character column that stores the primary classification of the provider - ie the specialty.
+In terms of aggregate payments, as expected. Internal Medicine received the largest payments, followed by suprisingly
+radiology
+
+```{r}
+summary3 = aggregate(amount_paid ~ provider_type, data = idata, FUN = function(x) c(sum = sum(x), mean = mean(x), sd = sd(x)))
+provider.summary = cbind(summary3[1], (unlist(summary3[,2])))
+arrange(provider.summary, desc(sum))
+```
+
+
+
+However, if we do arrange payments by mean payments, Sleep Medicine receives the highers followed by Psychologist, and
+Addiction Medicine. This may be a function of the dataset, as we are only looking a providers whose names start with 'A'.
+
+```{r}
+arrange(provider.summary, desc(mean))
+```
+
+
+Place_of_service
+***************Analysis
+Place of service is a character filed that stores where the service took place, O = Office, F = Facility.
+
+More payments were made to offices as compared to facilities (clinics, hospitals), as should be expected
+
+```{r}
+summary4 = aggregate(amount_paid ~ place_of_service, data = idata, FUN = function(x) c(sum = sum(x), mean = mean(x), sd = sd(x)))
+place.summary = cbind(summary4[1], (unlist(summary4[,2])))
+arrange(place.summary, desc(sum))
+```
+
+
+Amount_paid
+***************Analysis
+This is the actual dollar amount that CMS paid to each provider for service provided. I wil will subet the dataset
+to look at only anesthesiology as the provider_type for the rest of the excercise
+
+```{r}
+str(idata)
+
+anesthesia.data = subset(idata, provider_type == "Anesthesiology")
+head(anesthesia.data)
+
+summary.anesthesia = aggregate(amount_paid ~ gender, data = anesthesia.data, FUN = function(x) c(sum = sum(x), mean = mean(x), sd = sd(x)))
+
+```
+Male anesthesiologists received almost 6 times the amount received by female anesthesiologists.
+
+```{r}
+anesthesia.gender  = cbind(summary.anesthesia[1], (unlist(summary.anesthesia[,2])))
+anesthesia.gender
+```
+
+However, when we do look at the ratio of Male to Female anesthesiologists 5:1, this explains the descrepancy
+```{r}
+ddply(anesthesia.data,~gender,summarise,number_of_providers = length(unique(provider_ID)))
+```
+
+
+Looking a anesthesia payments per state, as expected the largest payments go to states with the largest Medicare Population
+Texas, California, Florida, and Ohio
+```{r}
+summary.state = aggregate(amount_paid ~ state, data = anesthesia.data, FUN = function(x) c(sum = sum(x), mean = mean(x), sd = sd(x)))
+anesthesia.state = cbind(summary.state[1], (unlist(summary.state[,2])))
+#anesthesia.state
+arrange(anesthesia.state, desc(sum))
+```
+
+
+Graphics:
+
+```{r, echo=FALSE}
+ggplot(anesthesia.state, aes(x = state, y = sum)) + geom_bar(stat ="identity", fill = "blue") +
+    labs(title = "Payments to anesthesiologists by state", x = "State", y = "amount")
+
+
+ggplot(anesthesia.gender, aes(x = gender, y = sum)) + geom_bar(stat ="identity", fill = "purple") +
+    labs(title = "Payments to anesthesiologists by gender", x = "State", y = "sum of payments")
+
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
