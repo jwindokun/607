@@ -1,0 +1,124 @@
+---
+output:
+  html_document:
+    fig_caption: yes
+    keep_md: yes
+---
+---
+title: "week_6_assignment"
+author: "Adejare Windokun"
+date: "Wednesday, October 01, 2014"
+output: html_document
+
+
+Will first of all load the required libraries, rvest and (devtools, if not already installed)
+
+```{r}
+if (!require(devtools)) install.packages('devtools')
+library(devtools)
+
+if (!require(rvest)) install_github("hadley/rvest")
+library(rvest)
+
+```
+
+I will use Ebay (ebay.com) and a particular page on Ebay that sells the 9500ix radar detector:
+
+http://www.ebay.com/sch/i.html?_from=R40&_trksid=p2050601.m570.l1313.TR11.TRC1.A0.H0.X9500ix&_nkw=9500ix&_sacat=0
+
+The items of interest are:
+
+Item of interest    CSS 
+Name of the item    .lvtitle
+Price               .lvprice or .g-b
+Format of bids      .lvformat
+Details             .lvdetails
+Extraxs             .lvextras
+Shipping            .lvshipping
+
+
+```{r comment=""}
+radar <- html("http://www.ebay.com/sch/i.html?_from=R40&_trksid=p2050601.m570.l1313.TR11.TRC1.A0.H0.X9500ix&_nkw=9500ix&_sacat=0")
+
+
+radar_name <- radar %>% 
+  html_nodes(".lvtitle") %>%
+  html_text() %>%
+  gsub("[\t\n\r\f\v]", "", .) 
+radar_name
+
+radar_price <- radar %>% 
+  html_nodes(".lvprice") %>%
+  html_text() %>%
+  gsub("[\t\n\r\f\v]", "", .) %>%
+  gsub("(^ +)|( +$)", "", .)
+radar_price
+
+radar_bid <- radar %>% 
+  html_nodes(".lvformat") %>%
+  html_text() %>%
+  gsub("[\t\n\r\f\v]", "", .) 
+radar_bid
+
+radar_extra <- radar %>% 
+  html_nodes(".lvextras") %>%
+  html_text() %>%
+  gsub(c("[\t\n\r\f\v]", "^\\s+|\\s+$"), "", .) 
+radar_extra
+
+radar_shipping <- radar %>% 
+  html_nodes(".lvshipping") %>%
+  html_text() %>%
+  gsub("[\t\n\r\f\v]", '', .) %>%
+  gsub("^\\s+|\\s+$", "", .)
+radar_shipping
+
+
+```
+
+It is not possible to convert the results into a data frame because the length of the vectors differ. The way Ebay stores the price, there is a buy it now price and the current bid price and both of them get scraped leading to a difference in the 
+length of the vectors. I haven't been able to figure out how to fix this.
+
+Therefore to create a data frame I am going to use the same Ebay site but now limit the results to "Buy it now", which only has a single buy it now price
+
+Website: http://www.ebay.com/sch/i.html?_from=R40&_sacat=0&_ipg=50&_nkw=9500ix&rt=nc&LH_BIN=1
+
+
+```{r comment=""}
+radar = html("http://www.ebay.com/sch/i.html?_from=R40&_sacat=0&_ipg=50&_nkw=9500ix&rt=nc&LH_BIN=1")
+
+radar_name <- radar %>% 
+  html_nodes(".lvtitle") %>%
+  html_text() %>%
+  gsub("[\t\n\r\f\v]", "", .) 
+radar_name
+
+radar_price <- radar %>% 
+  html_nodes(".lvprice") %>%
+  html_text() %>%
+  gsub("[\t\n\r\f\v]", "", .) 
+radar_price
+
+radar_bid <- radar %>% 
+  html_nodes(".lvformat") %>%
+  html_text() %>%
+  gsub("[\t\n\r\f\v]", "", .) 
+radar_bid
+
+radar_extra <- radar %>% 
+  html_nodes(".lvextras") %>%
+  html_text() %>%
+  gsub("[\t\n\r\f\v]", "", .) %>%
+  gsub("(^ +)|( +$)", "", .)
+radar_extra
+
+length(radar_name)
+length(radar_price)
+length(radar_bid)
+length(radar_extra)
+
+radar_df = data.frame(radar_name, radar_price, radar_bid, radar_extra)
+radar_df
+
+```
+
