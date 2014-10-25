@@ -1,0 +1,166 @@
+
+---
+title: "week_9_assignment"
+author: "Adejare Windokun"
+date: "Saturday, October 25, 2014"
+output: word_document
+---
+
+
+Part 1: mongoimport
+Code to import files
+
+C:\Users\jare\SkyDrive\WorkDocs\CUNY\607\Week 9\mongodb\bin>mongoimport --host localhost --db unitedstates --collection states --type csv --headerline --file statedata.csv
+connected to: localhost
+2014-10-25T12:10:49.253-0400 check 9 51
+2014-10-25T12:10:49.263-0400 imported 50 objects
+
+C:\Users\jare\SkyDrive\WorkDocs\CUNY\607\Week 9\mongodb\bin>mongoimport --host localhost --db unitedstates --collection states --type tsv --headerline --file districtdata.txt
+connected to: localhost
+2014-10-25T12:11:09.303-0400 imported 1 objects
+
+C:\Users\jare\SkyDrive\WorkDocs\CUNY\607\Week 9\mongodb\bin>mongoimport --host localhost --db unitedstates --collection states --type tsv --headerline --file inhabitedterritorydata.txt
+connected to: localhost
+2014-10-25T12:11:18.595-0400 imported 5 objects
+
+
+```{r}
+if (!require(rmongodb)) install.packages('rmongodb')
+library(rmongodb)
+if (!require(jsonlite)) install.packages('jsonlite')
+library(jsonlite)
+if (!require(plyr)) install.packages('plyr')
+library(plyr)
+# install rmongodbHelper package from GitHub
+# install.packages("devtools")
+if (!require(devtools)) install.packages('devtools')
+library(devtools)
+
+if (!require(rmongodbHelper)) devtools::install_github("joyofdata/rmongodbHelper")
+library(rmongodbHelper)
+
+# Example of the rmongodbHelper
+# json_qry <-
+# '{
+#   "$or": [
+#     {"a":1},
+#     {"a":3}
+#   ]
+# }'
+#  
+# bson <- rmongodbhelper::json_to_bson(json_qry)
+
+```
+
+connect to the mongodb database
+```{r}
+mongo = mongo.create()
+mongo.is.connected(mongo)
+
+```
+
+see all the records
+```{r}
+#No query criteria
+q = "{}"
+if (mongo.is.connected(mongo)) {
+    cursor <- mongo.find(mongo, "unitedstates.states", query = q, limit = 10L)
+    while (mongo.cursor.next(cursor))
+        print(mongo.cursor.value(cursor))
+    mongo.cursor.destroy(cursor)
+}
+
+```
+
+Part 2: rmongodb
+Query to select out the states { state: { $exists: true } }
+
+```{r}
+ 
+json_qry <-
+ '{
+   "state": 
+     {"$exists":true}
+ }'
+
+
+bson <- rmongodbHelper::json_to_bson(json_qry)
+
+states = data.frame()
+cursor <- mongo.find(mongo, "unitedstates.states", bson)
+i = 1
+while(mongo.cursor.next(cursor))
+{
+    tmp = mongo.bson.to.list(mongo.cursor.value(cursor))
+    tmp.df = as.data.frame(t(unlist(tmp)), stringAsFactors = FALSE)
+    tmp.df = subset(tmp.df, select = c(-1))
+    states = rbind.fill(states, tmp.df)
+i = i + 1
+}
+head(states)
+```
+
+For the districts
+Query to select out the districts { federal_district: { $exists: true } } 
+
+```{r}
+
+json_qry <-
+ '{
+   "federal_district": 
+     {"$exists":true}
+ }'
+
+
+bson <- rmongodbHelper::json_to_bson(json_qry)
+
+
+districts = data.frame()
+cursor <- mongo.find(mongo, "unitedstates.states", bson)
+i = 1
+while(mongo.cursor.next(cursor))
+{
+    tmp = mongo.bson.to.list(mongo.cursor.value(cursor))
+    tmp.df = as.data.frame(t(unlist(tmp)), stringAsFactors = FALSE)
+    tmp.df = subset(tmp.df, select = c(-1))
+    districts = rbind.fill(districts, tmp.df)
+i = i + 1
+}
+head(districts)
+
+```
+
+For territories
+Query to select out the territory { territory: { $exists: true } } 
+
+```{r}
+
+
+
+json_qry <-
+ '{
+   "territory": 
+     {"$exists":true}
+ }'
+
+
+bson <- rmongodbHelper::json_to_bson(json_qry)
+
+territories = data.frame()
+cursor <- mongo.find(mongo, "unitedstates.states", bson)
+i = 1
+while(mongo.cursor.next(cursor))
+{
+    tmp = mongo.bson.to.list(mongo.cursor.value(cursor))
+    tmp.df = as.data.frame(t(unlist(tmp)), stringAsFactors = FALSE)
+    tmp.df = subset(tmp.df, select = c(-1))
+    territories = rbind.fill(territories, tmp.df)
+i = i + 1
+}
+head(territories)
+
+```
+
+
+
+

@@ -1,0 +1,111 @@
+---
+title: "Project 3"
+author: "Adejare Windokun"
+date: "Wednesday, October 08, 2014"
+output: pdf_document
+---
+
+Project 3: Loading Data into a Database
+
+1. Will need RPostgreSQL which contains the driver and connectivity functions to interact with the PostgreSQL Server
+
+````{r}
+
+if (!require(RPostgreSQL)) install.packages('RPostgreSQL')
+library(RPostgreSQL)
+
+```
+
+Now will build the connection string passing the username and password parameters.
+In addition will create the Database, 650G to store the imported text file
+
+Will delete the database if it already exists, and then recreate it. Drop Database does not allow transaction processing
+therefore have to do it in two statements
+
+```{r}
+drv = dbDriver("PostgreSQL")
+con = dbConnect(drv, user= "postgres", password="cuny2014")
+sql = 'DROP DATABASE IF EXISTS "650G" ;'
+rs = dbSendQuery(con, sql)
+sql = 'CREATE DATABASE "650G";'
+rs = dbSendQuery(con, sql)
+
+dbDisconnect(con)
+
+```
+
+Will now create the table to store our data. Will name the table with tbl followed by the data for easy indentification.
+The column names are from those given at Amazon's introduction to the 650G schema
+
+```{r}
+con = dbConnect(drv, user= "postgres", password="cuny2014", dbname = "650G")
+
+sql = paste('DROP TABLE IF EXISTS tbl20141001140000;',
+
+'CREATE TABLE tbl20141001140000 
+(
+    record_id serial PRIMARY KEY, 
+    language VARCHAR (50) NULL, 
+    page_title TEXT NULL, 
+    num_requests BIGINT NULL, 
+    size_content BIGINT NULL
+    
+    
+);')
+
+rs = dbSendQuery(con, sql)
+
+
+dbDisconnect(con)
+```
+
+Show the structure of the table(s) that you created. (A single table is acceptable; you'll need to create the database and table(s)).
+
+Code from: http://www.alberton.info/postgresql_meta_info.html, Extracting META information from PostgreSQL (INFORMATION_SCHEMA), Lorenzo Alberton
+
+```{r}
+con = dbConnect(drv, user= "postgres", password="cuny2014", dbname = "650G")
+
+sql = "SELECT ordinal_position, column_name, data_type, column_default, is_nullable, character_maximum_length, numeric_precision FROM
+information_schema.columns WHERE table_name = 'tbl20141001140000' ORDER BY ordinal_position;"
+
+dbGetQuery(con, sql)
+
+dbDisconnect(con)
+
+```
+
+
+Will now import the data from the text file into a dataframe and then export it into our newly created PostgreSQL table
+
+```{r}
+mfile = "C:/Users/jare/SkyDrive/WorkDocs/CUNY/607/Week 7/Project 3/20141001140000.txt"
+mydata = read.table(mfile, stringsAsFactors = FALSE) 
+head(mydata)
+
+con = dbConnect(drv, user= "postgres", password="cuny2014", dbname = "650G")
+s = dbWriteTable(con, "tbl20141001140000", value = mydata, append = T)
+
+print (s)
+
+```
+
+. Provide the SQL script to show the five most often visited Wikipedia pages.
+
+```{r}
+sql =   "SELECT page_title, num_requests FROM tbl20141001140000 ORDER BY num_requests DESC LIMIT 5;"
+    
+dbGetQuery(con, sql)
+
+dbDisconnect(con)
+```
+
+Clean up
+```{r}
+dbDisconnect(con)
+dbUnloadDriver(drv)
+drv = NULL
+con = NULL
+
+```
+

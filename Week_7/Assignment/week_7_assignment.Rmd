@@ -1,0 +1,187 @@
+---
+title: "week_7_assignment"
+author: "Adejare Windokun"
+date: "Wednesday, October 08, 2014"
+output: pdf_document
+---
+
+Will need RPostgreSQL which contains the driver and connectivity functions to interact with the PostgreSQL Server
+
+```{r}
+
+if (!require(RPostgreSQL)) install.packages('RPostgreSQL')
+library(RPostgreSQL)
+
+```
+1. Create a new database in PostgreSQL. You may use a graphical tool to populate the database.
+Already did this using the graphical tool provided pgAdmin III
+*************************************************************************************************************************
+
+2. Populate your newly created database with two tables that have a one-to-many relationship. 
+You should create the two tables using the CREATE TABLE command. There should be at least one example
+each of integer, numeric, character, and a date data type in at least one of the two tables.
+There should be at least one character column that allows NULLs. Deliverable: Your two CREATE TABLE statements.
+
+Will create the database
+```{r}
+drv =dbDriver("PostgreSQL")
+con <- dbConnect(drv, user= "postgres", password="cuny2014")
+sql = 'DROP DATABASE IF EXISTS "Books" ;'
+rs = dbSendQuery(con, sql)
+sql = 'CREATE DATABASE "Books"'
+rs = dbSendQuery(con, sql)
+dbDisconnect (con)
+```
+
+Then the two tables - The Author table that stores information on the Authors
+```{r}
+
+
+con <- dbConnect(drv, user= "postgres", password="cuny2014", dbname = "Books")
+sql = paste('DROP TABLE IF EXISTS Authors CASCADE;',
+
+'CREATE TABLE Authors
+(
+    author_id serial PRIMARY KEY,
+    fname VARCHAR (25) NOT NULL,
+    lname VARCHAR (20) NOT NULL,
+    phone VARCHAR (10) NULL,
+    zipcode INTEGER NULL,
+    created_on timestamp without time zone DEFAULT now() 
+);')
+
+rs = dbSendQuery(con, sql)
+
+dbDisconnect(con)
+```
+
+The Titles table that stores the book titlies
+
+```{r}
+
+con <- dbConnect(drv, user= "postgres", password="cuny2014", dbname = "Books")
+sql = paste('DROP TABLE IF EXISTS Titles;',
+
+'CREATE TABLE Titles
+(
+    book_ID serial PRIMARY KEY,
+    book_author INTEGER REFERENCES Authors(author_id),
+    ISBN VARCHAR (25) NOT NULL,
+    book_title VARCHAR (50) NOT NULL,
+    subject VARCHAR (50) NULL,
+    rating INTEGER NULL,
+    price NUMERIC NULL,
+    publish_date DATE NOT NULL
+    
+    
+);')
+
+rs = dbSendQuery(con, sql)
+dbDisconnect(con)
+```
+
+3. Populate the two tables with some sample data, using INSERT statements. Each table should contain at least three records,
+and the data should accurately reflect the one-to-many relationship. There should also be at least one row where the character
+column that allows NULL values has a value of NULL. Deliverable: your set of INSERT statements.
+
+```{r}
+
+con <- dbConnect(drv, user= "postgres", password="cuny2014", dbname = "Books")
+
+sql = "INSERT INTO Authors (fname, lname, phone, zipcode)
+ 
+VALUES
+ 
+    ('James', 'Brown', '3102366369', 47898),
+    ('Jill', 'Thomas', '1234567896', 85258),
+    ('Susan', 'Waters', '5052588969', 20025),
+    ('Tom', 'Baldwin', '9899699696', 90059);"
+
+
+rs = dbSendQuery(con, sql)
+dbGetRowsAffected(rs)
+dbDisconnect(con)
+
+```
+
+
+Will hard code in the values of book_author for this excercise, In practice would have used a select statement to look up the book_author for the
+authors table
+
+```{r}
+
+con <- dbConnect(drv, user= "postgres", password="cuny2014", dbname = "Books")
+
+sql = "INSERT INTO Titles (book_author, isbn, book_title, subject, rating, price, publish_date)
+ 
+VALUES
+ 
+    (1, '0-85131-041-9', 'The Art of Unix Programming', 'Math', 5, 39.99, to_date('2014','YYYY')),
+    (1, '85-359-0277-5', 'The Art of Computer Programming', 'Science', 3, 29.99, to_date('2013', 'YYYY')),
+    (1, '80-902734-1-6', 'Hacker Culture', 'Literature', NULL, 19.59, to_date('2000', 'YYYY')),
+
+    (2, '960-425-059-0', 'Catch - 22', 'Chemistry', 1, 105.25, to_date('2001', 'YYYY')),
+    (2, '9971-5-0210-0', 'Ulysses', 'Biology', 2, 78.25, to_date('2015', 'YYYY')),
+
+    (3, '99921-58-10-7', 'The Hacker Crackdown', 'Computer Science', 4, 25.36, to_date('2005', 'YYYY'));"
+
+
+rs = dbSendQuery(con, sql)
+dbGetRowsAffected(rs)
+dbDisconnect(con)
+```
+
+Provide samples of the different kinds of joins across the two tables. You should include one join that performs a WHERE on the COLUMN that allows a NULL value. Deliverable: Your SELECT statements.
+
+```{r}
+
+con <- dbConnect(drv, user= "postgres", password="cuny2014", dbname = "Books")
+
+sql1 = 'SELECT * FROM authors, titles WHERE authors.author_id = titles.book_author;'
+sql2 = 'SELECT * FROM authors, titles WHERE authors.author_id = titles.book_author AND titles.rating IS NOT NULL;'
+sql3 = 'SELECT * FROM authors  INNER JOIN titles ON authors.author_id = titles.book_author;'
+sql4 = 'SELECT * FROM authors  RIGHT JOIN titles ON authors.author_id = titles.book_author;'
+sql5 = 'SELECT * FROM authors  FULL JOIN titles ON authors.author_id = titles.book_author;'
+
+```
+**********Select query showing Authors and Book Details**********
+```{r}
+dbGetQuery(con, sql1)
+```
+
+**********Select query showing Authors and Book Details that performs a Where on a null column**********
+```{r}
+dbGetQuery(con, sql2)
+```
+**********Select query showing Authors and Book Details that performs an INNER JOIN**********
+```{r}
+dbGetQuery(con, sql3)
+```
+**********Select query showing Authors and Book Details that performs an RIGHT JOIN**********
+```{r}
+dbGetQuery(con, sql4)
+```
+**********Select query showing Authors and Book Details that performs a FULL JOIN**********
+```{r}
+dbGetQuery(con, sql5)
+
+dbDisconnect (con)
+```
+
+Clean up
+```{r}
+dbDisconnect (con)
+dbUnloadDriver(drv)
+drv = NULL
+con = NULL
+
+```
+
+```
+
+5. Create an Entity-Relationship (ER) diagramthat shows the two tables that you created. An example of an ER diagram can be found here: http://www.postgresqltutorial.com/wp-content/uploads/2013/05/PostgreSQL-Sample-Database.png. You can generate the ER diagram with a tool, or hand-sketch, then photograph or scan. Deliverable: a .PNG or .PDF of your ER diagram.
+
+Will attach a PDF
+
+
+
