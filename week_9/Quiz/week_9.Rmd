@@ -40,6 +40,22 @@ mongo.is.connected(mongo)
 
 ```
 
+Code to destroy the database and collection if neccessary
+
+```{r}
+if (mongo.is.connected(mongo) == TRUE) {
+     mongo.drop(mongo, "employment.employees")
+     mongo.drop.database(mongo, "employment")
+#     #res <- mongo.get.database.collections(mongo, "employment")
+#     #print(res)
+#     #close connection
+#     mongo.destroy(mongo)
+ }
+
+```
+
+
+
 1. Create a new MongoDB database called employment.
 
 ```{r}
@@ -48,19 +64,7 @@ mongo <- mongo.create(db=db)
 
 ```
 
-Code to destroy the database and collection if neccessary
 
-```{r}
-# if (mongo.is.connected(mongo) == TRUE) {
-#     mongo.drop(mongo, "employment.employees")
-#     mongo.drop.database(mongo, "employment")
-#     #res <- mongo.get.database.collections(mongo, "employment")
-#     #print(res)
-#     #close connection
-#     mongo.destroy(mongo)
-# }
-
-```
 
 2. Insert a new record for Wendy Yasquez into the database and into a collection called employees.
 
@@ -93,38 +97,70 @@ if (mongo.is.connected(mongo)) {
 ```
 
 
-
-
-
 3. Write a JavaScript function to insert new professors into the employees collection.
 Could not do this in R - used Robomongo
 
-function insertProf(name, title, salary, department, hire_year){
-    db.employees.insert({Name:name, Title:title, Salary:salary, Department:department, Hire_Year:hire_year})
-        
-}
+db.system.js.save(
+                   { _id: "insertProf",
+                     value : function (name, title, salary, department, hire_year){ db.employees.insert({Name:name, Title:title, Salary:salary, Department:department, Hire_Year:hire_year})}
+                   }
+                 )
+
 
 4. Use this function to insert the records for Raoul Dewan, Isabelle Winters, and Jack McDunn.
+    First you have to load the scripts
+    db.loadServerScripts();
+    
     Did this using the function I created:
     
     insertProf('Raoul Dewan', 'Assistant Professor', 78000, ['Physics', 'Biology'], 2009) 
     insertProf('Isabelle Winters', 'Associate Professor', 92000, 'Physics', 1995)
     insertProf('Jack MuDunn', 'Associate Professor', 101000, 'Physics', 1993)
+    
+```{r}
+ins1 = '{"Name":"Raoul Dewan", "Title":"Assistant Professor", "Salary":78000, "Department": "[Physics, Biology]", "Hire_Year":2009}'
+
+ins2 = '{"Name":"Isabelle Winters", "Title":"Associate Professor", "Salary":92000, "Department":"Physics", "Hire_Year":1995}'
+
+ins3 = '{"Name":"Jack MuDunn", "Title":"Associate Professor", "Salary":101000, "Department":"Physics", "Hire_Year":1993}'
+
+
+        mongo.insert(mongo, "employment.employees", ins1)
+        mongo.insert(mongo, "employment.employees", ins2)
+        mongo.insert(mongo, "employment.employees", ins3)
+
+
+```
 
     
 5. Write a JavaScript function to insert new administrative employees into the employees collection.
 
-function insertAdmins(name, title, salary, division, location, hire_year){
-    db.employees.insert({Name:name, Title:title, Salary:salary, Division:division, Location:location, Hire_Year:hire_year})
-        
-}
+db.system.js.save(
+                  { _id: "insertAdmins",
+                    value : function (name, title, salary, division, location, hire_year){ db.employees.insert({Name:name, Title:title, Salary:salary,
+                    Division:division, Location:location, Hire_Year:hire_year})
+                  }}
+                )
 
-6. Use this function to insert the records for Tonja Baldner and Dennis Bohnet.
-
+ 6. Use this function to insert the records for Tonja Baldner and Dennis Bohnet.
+    db.loadServerScripts();
     insertAdmins('Tonja Baldner', 'Assistant to the Dean', 42000, 'Ats and Sciences', '', 2001)
-
     insertAdmins('Dennis Bohnet', 'Vice President', 106000, 'Academic Affairs', 'Main Campus', 1997)
 
+
+```{r}
+ins4 = '{"Name":"Tonja Baldner", "Title":"Assistant to the Dean", "Salary":42000, "Division":"Ats and Sciences", "Location": "", "Hire_Year":1995}'
+
+ins5 = '{"Name":"Dennis Bohnet", "Title":"Vice President", "Salary":106000, "Division":"Academic Affairs", "Location": "Main Campus",  "Hire_Year":1993}'
+
+
+        mongo.insert(mongo, "employment.employees", ins4)
+        mongo.insert(mongo, "employment.employees", ins5)
+        
+
+```
+
+    
 7. Show the code that will return all employees with salaries less than $90,000.
 
 db.employees.find({Salary:{$lt:90000}})
@@ -145,31 +181,6 @@ if (mongo.is.connected(mongo)) {
 8. Show the code that will return all professors with salaries less than $90,000.
 
 db.employees.find({Title: { $regex: /PROFESSOR/i }, Salary:{$lt:90000}})
-
-
-```{r}
-# could not get the R code to work. I cant seem to get the JSON query right
-# json_qry <-
-#  '{
-#    "Title": 
-#      {"$regex":"/'PROFESSOR'/i"},
-#      "Salary":
-#     {"$lt":90000}
-# 
-#  }'
-# 
-# cat(prettify(json_qry))
-# bson <- rmongodbHelper::json_to_bson(json_qry)
-# 
-# if (mongo.is.connected(mongo)) {
-#     cursor <- mongo.find(mongo, "employment.employees", query = bson)
-#     while (mongo.cursor.next(cursor))
-#         print(mongo.cursor.value(cursor))
-#     mongo.cursor.destroy(cursor)
-# }
-
-```
-
 
 
 9. Show the code that will return all Physics professors hired before 2001.
@@ -201,9 +212,19 @@ if (mongo.is.connected(mongo)) {
 
 10. Show the code that will return all professors who teach for departments other than Physics. (This should include professors who teach for Physics and also other departments.)
 
-db.employees.find({Department:{$ne:'Physics'}, Title: { $regex: /PROFESSOR/i }})
+db.employees.find({ $and: [
+    {$or: 
+        [
+            {Department:{$ne:'Physics'}},
+       
+            {'Department.1': {$exists: true}}
+       
+        ]},
+    
+     {Title: { $regex: /PROFESSOR/i }}  
 
-
+   ]} 
+)
 
 11. Show the code that will return all employees who were either hired before 1997 or who have salaries greater than $100,000.
 
@@ -235,19 +256,23 @@ if (mongo.is.connected(mongo)) {
 
 
 12. Suppose Tonja Baldner has been given a 10% raise. Show the code that will update her salary correctly.
-
 db.employees.update(
    { Name: 'Tonja Baldner'},
    { $mul: { Salary: 1.1 } }
 )
 
-
 ```{r}
+cursor <- mongo.find.one(mongo, "employment.employees", query = '{"Name":"Tonja Baldner"}')
+print("Before Update")
+print(cursor)
+
 crit = '{ "Name": "Tonja Baldner"}'
 obj = '{ "$mul": { "Salary": 1.1 } }'
     
 mongo.update(mongo, "employment.employees", criteria = crit, objNew= obj)
-
+cursor <- mongo.find.one(mongo, "employment.employees", query = '{"Name":"Tonja Baldner"}')
+print("After Update")
+print(cursor)
 
 ```
 
@@ -256,6 +281,17 @@ Have to do question 14 first, otherwise, Prof Dewan is already deleted from the 
 
 Will first copy over the document from the employees collection to the newly created pastemployees collection
 Will then insert the new field = departyear and update it to 2014
+
+Do everything in one step:
+
+db.employees.find({Name: 'Raoul Dewan'}).forEach(function(doc){
+   db.pastemployees.insert(doc)
+   db.pastemployees.update(doc,{$set : {"departyear":2014}})
+   db.employees.remove(doc)
+   
+});
+
+
 
 ```{r}
 cursor <- mongo.find.one(mongo, "employment.employees",query = '{"Name":"Raoul Dewan"}')

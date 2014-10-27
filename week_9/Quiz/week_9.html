@@ -98,20 +98,21 @@ if (!require(rmongodbHelper)) devtools::install_github(&quot;joyofdata/rmongodbH
 <pre class="r"><code>mongo = mongo.create()
 mongo.is.connected(mongo)</code></pre>
 <pre><code>## [1] TRUE</code></pre>
+<p>Code to destroy the database and collection if neccessary</p>
+<pre class="r"><code>if (mongo.is.connected(mongo) == TRUE) {
+     mongo.drop(mongo, &quot;employment.employees&quot;)
+     mongo.drop.database(mongo, &quot;employment&quot;)
+#     #res &lt;- mongo.get.database.collections(mongo, &quot;employment&quot;)
+#     #print(res)
+#     #close connection
+#     mongo.destroy(mongo)
+ }</code></pre>
+<pre><code>## [1] TRUE</code></pre>
 <ol style="list-style-type: decimal">
 <li>Create a new MongoDB database called employment.</li>
 </ol>
 <pre class="r"><code>db &lt;- &quot;employment&quot;
 mongo &lt;- mongo.create(db=db)</code></pre>
-<p>Code to destroy the database and collection if neccessary</p>
-<pre class="r"><code># if (mongo.is.connected(mongo) == TRUE) {
-#     mongo.drop(mongo, &quot;employment.employees&quot;)
-#     mongo.drop.database(mongo, &quot;employment&quot;)
-#     #res &lt;- mongo.get.database.collections(mongo, &quot;employment&quot;)
-#     #print(res)
-#     #close connection
-#     mongo.destroy(mongo)
-# }</code></pre>
 <ol start="2" style="list-style-type: decimal">
 <li>Insert a new record for Wendy Yasquez into the database and into a collection called employees.</li>
 </ol>
@@ -139,48 +140,7 @@ if (mongo.is.connected(mongo)) {
         print(mongo.cursor.value(cursor))
     mongo.cursor.destroy(cursor)
 }</code></pre>
-<pre><code>##  _id : 7      544bf40a47e597fde9f8aefb
-##  Name : 2     Wendy Yasquez
-##  Title : 2    Assistant Professor
-##  Salary : 16      86000
-##  Department : 2   Computer Science
-##  Hire_Year : 16   1998
-##  _id : 7      544bf41c1b7c83ec123387c8
-##  Name : 2     Isabelle Winters
-##  Title : 2    Associate Professor
-##  Salary : 1   92000.000000
-##  Department : 2   Physics
-##  Hire_Year : 1    1995.000000
-##  _id : 7      544bf41c1b7c83ec123387c9
-##  Name : 2     Jack MuDunn
-##  Title : 2    Associate Professor
-##  Salary : 1   101000.000000
-##  Department : 2   Physics
-##  Hire_Year : 1    1993.000000
-##  _id : 7      544bf41c1b7c83ec123387ca
-##  Name : 2     Tonja Baldner
-##  Title : 2    Assistant to the Dean
-##  Salary : 1   55902.000000
-##  Division : 2     Ats and Sciences
-##  Location : 2     
-##  Hire_Year : 1    2001.000000
-##  _id : 7      544bf41c1b7c83ec123387cb
-##  Name : 2     Dennis Bohnet
-##  Title : 2    Vice President
-##  Salary : 1   106000.000000
-##  Division : 2     Academic Affairs
-##  Location : 2     Main Campus
-##  Hire_Year : 1    1997.000000
-##  _id : 7      544bf7891b7c83ec123387cd
-##  Name : 2     Raoul Dewan
-##  Title : 2    Assistant Professor
-##  Salary : 1   78000.000000
-##  Department : 4   
-##      0 : 2    Physics
-##      1 : 2    Biology
-## 
-##  Hire_Year : 1    2009.000000
-##  _id : 7      544bf79147e597fde9f8aeff
+<pre><code>##  _id : 7      544e792e2fbaedb5228805bf
 ##  Name : 2     Wendy Yasquez
 ##  Title : 2    Assistant Professor
 ##  Salary : 16      86000
@@ -190,20 +150,41 @@ if (mongo.is.connected(mongo)) {
 <ol start="3" style="list-style-type: decimal">
 <li>Write a JavaScript function to insert new professors into the employees collection. Could not do this in R - used Robomongo</li>
 </ol>
-<p>function insertProf(name, title, salary, department, hire_year){ db.employees.insert({Name:name, Title:title, Salary:salary, Department:department, Hire_Year:hire_year})</p>
-<p>}</p>
+<p>db.system.js.save( { _id: “insertProf”, value : function (name, title, salary, department, hire_year){ db.employees.insert({Name:name, Title:title, Salary:salary, Department:department, Hire_Year:hire_year})} } )</p>
 <ol start="4" style="list-style-type: decimal">
-<li><p>Use this function to insert the records for Raoul Dewan, Isabelle Winters, and Jack McDunn. Did this using the function I created:</p>
+<li><p>Use this function to insert the records for Raoul Dewan, Isabelle Winters, and Jack McDunn. First you have to load the scripts db.loadServerScripts();</p>
+<p>Did this using the function I created:</p>
 <p>insertProf(‘Raoul Dewan’, ‘Assistant Professor’, 78000, [‘Physics’, ‘Biology’], 2009) insertProf(‘Isabelle Winters’, ‘Associate Professor’, 92000, ‘Physics’, 1995) insertProf(‘Jack MuDunn’, ‘Associate Professor’, 101000, ‘Physics’, 1993)</p></li>
-<li><p>Write a JavaScript function to insert new administrative employees into the employees collection.</p></li>
 </ol>
-<p>function insertAdmins(name, title, salary, division, location, hire_year){ db.employees.insert({Name:name, Title:title, Salary:salary, Division:division, Location:location, Hire_Year:hire_year})</p>
-<p>}</p>
+<pre class="r"><code>ins1 = '{&quot;Name&quot;:&quot;Raoul Dewan&quot;, &quot;Title&quot;:&quot;Assistant Professor&quot;, &quot;Salary&quot;:78000, &quot;Department&quot;: &quot;[Physics, Biology]&quot;, &quot;Hire_Year&quot;:2009}'
+
+ins2 = '{&quot;Name&quot;:&quot;Isabelle Winters&quot;, &quot;Title&quot;:&quot;Associate Professor&quot;, &quot;Salary&quot;:92000, &quot;Department&quot;:&quot;Physics&quot;, &quot;Hire_Year&quot;:1995}'
+
+ins3 = '{&quot;Name&quot;:&quot;Jack MuDunn&quot;, &quot;Title&quot;:&quot;Associate Professor&quot;, &quot;Salary&quot;:101000, &quot;Department&quot;:&quot;Physics&quot;, &quot;Hire_Year&quot;:1993}'
+
+        mongo.insert(mongo, &quot;employment.employees&quot;, ins1)</code></pre>
+<pre><code>## [1] TRUE</code></pre>
+<pre class="r"><code>        mongo.insert(mongo, &quot;employment.employees&quot;, ins2)</code></pre>
+<pre><code>## [1] TRUE</code></pre>
+<pre class="r"><code>        mongo.insert(mongo, &quot;employment.employees&quot;, ins3)</code></pre>
+<pre><code>## [1] TRUE</code></pre>
+<ol start="5" style="list-style-type: decimal">
+<li>Write a JavaScript function to insert new administrative employees into the employees collection.</li>
+</ol>
+<p>db.system.js.save( { _id: “insertAdmins”, value : function (name, title, salary, division, location, hire_year){ db.employees.insert({Name:name, Title:title, Salary:salary, Division:division, Location:location, Hire_Year:hire_year}) }} )</p>
 <ol start="6" style="list-style-type: decimal">
-<li><p>Use this function to insert the records for Tonja Baldner and Dennis Bohnet.</p>
-<p>insertAdmins(‘Tonja Baldner’, ‘Assistant to the Dean’, 42000, ‘Ats and Sciences’, ’’, 2001)</p>
-<p>insertAdmins(‘Dennis Bohnet’, ‘Vice President’, 106000, ‘Academic Affairs’, ‘Main Campus’, 1997)</p></li>
-<li><p>Show the code that will return all employees with salaries less than $90,000.</p></li>
+<li>Use this function to insert the records for Tonja Baldner and Dennis Bohnet. db.loadServerScripts(); insertAdmins(‘Tonja Baldner’, ‘Assistant to the Dean’, 42000, ‘Ats and Sciences’, ‘’, 2001) insertAdmins(’Dennis Bohnet’, ‘Vice President’, 106000, ‘Academic Affairs’, ‘Main Campus’, 1997)</li>
+</ol>
+<pre class="r"><code>ins4 = '{&quot;Name&quot;:&quot;Tonja Baldner&quot;, &quot;Title&quot;:&quot;Assistant to the Dean&quot;, &quot;Salary&quot;:42000, &quot;Division&quot;:&quot;Ats and Sciences&quot;, &quot;Location&quot;: &quot;&quot;, &quot;Hire_Year&quot;:1995}'
+
+ins5 = '{&quot;Name&quot;:&quot;Dennis Bohnet&quot;, &quot;Title&quot;:&quot;Vice President&quot;, &quot;Salary&quot;:106000, &quot;Division&quot;:&quot;Academic Affairs&quot;, &quot;Location&quot;: &quot;Main Campus&quot;,  &quot;Hire_Year&quot;:1993}'
+
+        mongo.insert(mongo, &quot;employment.employees&quot;, ins4)</code></pre>
+<pre><code>## [1] TRUE</code></pre>
+<pre class="r"><code>        mongo.insert(mongo, &quot;employment.employees&quot;, ins5)</code></pre>
+<pre><code>## [1] TRUE</code></pre>
+<ol start="7" style="list-style-type: decimal">
+<li>Show the code that will return all employees with salaries less than $90,000.</li>
 </ol>
 <p>db.employees.find({Salary:{$lt:90000}})</p>
 <pre class="r"><code>q = '{&quot;Salary&quot;:{&quot;$lt&quot;:90000}}'
@@ -213,58 +194,30 @@ if (mongo.is.connected(mongo)) {
         print(mongo.cursor.value(cursor))
     mongo.cursor.destroy(cursor)
 }</code></pre>
-<pre><code>##  _id : 7      544bf40a47e597fde9f8aefb
+<pre><code>##  _id : 7      544e792e2fbaedb5228805bf
 ##  Name : 2     Wendy Yasquez
 ##  Title : 2    Assistant Professor
 ##  Salary : 16      86000
 ##  Department : 2   Computer Science
 ##  Hire_Year : 16   1998
-##  _id : 7      544bf41c1b7c83ec123387ca
-##  Name : 2     Tonja Baldner
-##  Title : 2    Assistant to the Dean
-##  Salary : 1   55902.000000
-##  Division : 2     Ats and Sciences
-##  Location : 2     
-##  Hire_Year : 1    2001.000000
-##  _id : 7      544bf7891b7c83ec123387cd
+##  _id : 7      544e79302fbaedb5228805c0
 ##  Name : 2     Raoul Dewan
 ##  Title : 2    Assistant Professor
-##  Salary : 1   78000.000000
-##  Department : 4   
-##      0 : 2    Physics
-##      1 : 2    Biology
-## 
-##  Hire_Year : 1    2009.000000
-##  _id : 7      544bf79147e597fde9f8aeff
-##  Name : 2     Wendy Yasquez
-##  Title : 2    Assistant Professor
-##  Salary : 16      86000
-##  Department : 2   Computer Science
-##  Hire_Year : 16   1998</code></pre>
+##  Salary : 16      78000
+##  Department : 2   [Physics, Biology]
+##  Hire_Year : 16   2009
+##  _id : 7      544e79302fbaedb5228805c3
+##  Name : 2     Tonja Baldner
+##  Title : 2    Assistant to the Dean
+##  Salary : 16      42000
+##  Division : 2     Ats and Sciences
+##  Location : 2     
+##  Hire_Year : 16   1995</code></pre>
 <pre><code>## [1] FALSE</code></pre>
 <ol start="8" style="list-style-type: decimal">
 <li>Show the code that will return all professors with salaries less than $90,000.</li>
 </ol>
 <p>db.employees.find({Title: { <span class="math">\(regex: /PROFESSOR/i }, Salary:{\)</span>lt:90000}})</p>
-<pre class="r"><code># could not get the R code to work. I cant seem to get the JSON query right
-# json_qry &lt;-
-#  '{
-#    &quot;Title&quot;: 
-#      {&quot;$regex&quot;:&quot;/'PROFESSOR'/i&quot;},
-#      &quot;Salary&quot;:
-#     {&quot;$lt&quot;:90000}
-# 
-#  }'
-# 
-# cat(prettify(json_qry))
-# bson &lt;- rmongodbHelper::json_to_bson(json_qry)
-# 
-# if (mongo.is.connected(mongo)) {
-#     cursor &lt;- mongo.find(mongo, &quot;employment.employees&quot;, query = bson)
-#     while (mongo.cursor.next(cursor))
-#         print(mongo.cursor.value(cursor))
-#     mongo.cursor.destroy(cursor)
-# }</code></pre>
 <ol start="9" style="list-style-type: decimal">
 <li>Show the code that will return all Physics professors hired before 2001.</li>
 </ol>
@@ -292,23 +245,29 @@ if (mongo.is.connected(mongo)) {
         print(mongo.cursor.value(cursor))
     mongo.cursor.destroy(cursor)
 }</code></pre>
-<pre><code>##  _id : 7      544bf41c1b7c83ec123387c8
+<pre><code>##  _id : 7      544e79302fbaedb5228805c1
 ##  Name : 2     Isabelle Winters
 ##  Title : 2    Associate Professor
-##  Salary : 1   92000.000000
+##  Salary : 16      92000
 ##  Department : 2   Physics
-##  Hire_Year : 1    1995.000000
-##  _id : 7      544bf41c1b7c83ec123387c9
+##  Hire_Year : 16   1995
+##  _id : 7      544e79302fbaedb5228805c2
 ##  Name : 2     Jack MuDunn
 ##  Title : 2    Associate Professor
-##  Salary : 1   101000.000000
+##  Salary : 16      101000
 ##  Department : 2   Physics
-##  Hire_Year : 1    1993.000000</code></pre>
+##  Hire_Year : 16   1993</code></pre>
 <pre><code>## [1] FALSE</code></pre>
 <ol start="10" style="list-style-type: decimal">
 <li>Show the code that will return all professors who teach for departments other than Physics. (This should include professors who teach for Physics and also other departments.)</li>
 </ol>
-<p>db.employees.find({Department:{$ne:‘Physics’}, Title: { $regex: /PROFESSOR/i }})</p>
+<p>db.employees.find({ <span class="math">\(and: [  {\)</span>or: [ {Department:{$ne:‘Physics’}},</p>
+<pre><code>        {'Department.1': {$exists: true}}
+   
+    ]},
+
+ {Title: { $regex: /PROFESSOR/i }}  </code></pre>
+<p>]} )</p>
 <ol start="11" style="list-style-type: decimal">
 <li>Show the code that will return all employees who were either hired before 1997 or who have salaries greater than $100,000.</li>
 </ol>
@@ -346,49 +305,77 @@ if (mongo.is.connected(mongo)) {
         print(mongo.cursor.value(cursor))
     mongo.cursor.destroy(cursor)
 }</code></pre>
-<pre><code>##  _id : 7      544bf41c1b7c83ec123387c8
+<pre><code>##  _id : 7      544e79302fbaedb5228805c1
 ##  Name : 2     Isabelle Winters
 ##  Title : 2    Associate Professor
-##  Salary : 1   92000.000000
+##  Salary : 16      92000
 ##  Department : 2   Physics
-##  Hire_Year : 1    1995.000000
-##  _id : 7      544bf41c1b7c83ec123387c9
+##  Hire_Year : 16   1995
+##  _id : 7      544e79302fbaedb5228805c2
 ##  Name : 2     Jack MuDunn
 ##  Title : 2    Associate Professor
-##  Salary : 1   101000.000000
+##  Salary : 16      101000
 ##  Department : 2   Physics
-##  Hire_Year : 1    1993.000000
-##  _id : 7      544bf41c1b7c83ec123387cb
+##  Hire_Year : 16   1993
+##  _id : 7      544e79302fbaedb5228805c3
+##  Name : 2     Tonja Baldner
+##  Title : 2    Assistant to the Dean
+##  Salary : 16      42000
+##  Division : 2     Ats and Sciences
+##  Location : 2     
+##  Hire_Year : 16   1995
+##  _id : 7      544e79302fbaedb5228805c4
 ##  Name : 2     Dennis Bohnet
 ##  Title : 2    Vice President
-##  Salary : 1   106000.000000
+##  Salary : 16      106000
 ##  Division : 2     Academic Affairs
 ##  Location : 2     Main Campus
-##  Hire_Year : 1    1997.000000</code></pre>
+##  Hire_Year : 16   1993</code></pre>
 <pre><code>## [1] FALSE</code></pre>
 <ol start="12" style="list-style-type: decimal">
-<li>Suppose Tonja Baldner has been given a 10% raise. Show the code that will update her salary correctly.</li>
+<li>Suppose Tonja Baldner has been given a 10% raise. Show the code that will update her salary correctly. db.employees.update( { Name: ‘Tonja Baldner’}, { $mul: { Salary: 1.1 } } )</li>
 </ol>
-<p>db.employees.update( { Name: ‘Tonja Baldner’}, { $mul: { Salary: 1.1 } } )</p>
+<pre class="r"><code>cursor &lt;- mongo.find.one(mongo, &quot;employment.employees&quot;, query = '{&quot;Name&quot;:&quot;Tonja Baldner&quot;}')
+print(&quot;Before Update&quot;)</code></pre>
+<pre><code>## [1] &quot;Before Update&quot;</code></pre>
+<pre class="r"><code>print(cursor)</code></pre>
+<pre><code>##  _id : 7      544e79302fbaedb5228805c3
+##  Name : 2     Tonja Baldner
+##  Title : 2    Assistant to the Dean
+##  Salary : 16      42000
+##  Division : 2     Ats and Sciences
+##  Location : 2     
+##  Hire_Year : 16   1995</code></pre>
 <pre class="r"><code>crit = '{ &quot;Name&quot;: &quot;Tonja Baldner&quot;}'
 obj = '{ &quot;$mul&quot;: { &quot;Salary&quot;: 1.1 } }'
     
 mongo.update(mongo, &quot;employment.employees&quot;, criteria = crit, objNew= obj)</code></pre>
 <pre><code>## [1] TRUE</code></pre>
+<pre class="r"><code>cursor &lt;- mongo.find.one(mongo, &quot;employment.employees&quot;, query = '{&quot;Name&quot;:&quot;Tonja Baldner&quot;}')
+print(&quot;After Update&quot;)</code></pre>
+<pre><code>## [1] &quot;After Update&quot;</code></pre>
+<pre class="r"><code>print(cursor)</code></pre>
+<pre><code>##  _id : 7      544e79302fbaedb5228805c3
+##  Name : 2     Tonja Baldner
+##  Title : 2    Assistant to the Dean
+##  Salary : 1   46200.000000
+##  Division : 2     Ats and Sciences
+##  Location : 2     
+##  Hire_Year : 16   1995</code></pre>
 <p>Have to do question 14 first, otherwise, Prof Dewan is already deleted from the database 14. Instead of removing Professor Dewans record, we might prefer to create a new collection called pastemployees and move his record there. Show the code that will move his record to the new collection and add a departyear value of 2014 to his record. (You can do it in two steps.)</p>
 <p>Will first copy over the document from the employees collection to the newly created pastemployees collection Will then insert the new field = departyear and update it to 2014</p>
+<p>Do everything in one step:</p>
+<p>db.employees.find({Name: ‘Raoul Dewan’}).forEach(function(doc){ db.pastemployees.insert(doc) db.pastemployees.update(doc,{$set : {“departyear”:2014}}) db.employees.remove(doc)</p>
+<p>});</p>
 <pre class="r"><code>cursor &lt;- mongo.find.one(mongo, &quot;employment.employees&quot;,query = '{&quot;Name&quot;:&quot;Raoul Dewan&quot;}')
 
 print (cursor)</code></pre>
-<pre><code>##  _id : 7      544bf7891b7c83ec123387cd
+<pre><code>##  _id : 7      544e79302fbaedb5228805c0
 ##  Name : 2     Raoul Dewan
 ##  Title : 2    Assistant Professor
-##  Salary : 1   78000.000000
-##  Department : 4   
-##      0 : 2    Physics
-##      1 : 2    Biology
-## 
-##  Hire_Year : 1    2009.000000</code></pre>
+##  Salary : 16      78000
+##  Department : 2   [Physics, Biology]
+##  Hire_Year : 16   2009</code></pre>
 <pre class="r"><code>mongo.insert(mongo, &quot;employment.pastemployees&quot;, cursor)</code></pre>
 <pre><code>## [1] TRUE</code></pre>
 <pre class="r"><code>crit = '{&quot;Name&quot;:&quot;Raoul Dewan&quot;}'
